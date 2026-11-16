@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guardrail Evaluator — measure the bypass RATE</title>
+<meta name="description" content="A prompt-injection suite with a benign canary target. Scores guardrail layers by bypass rate, not pass/fail, because a guardrail that holds 19 times out of 20 fails once a day.">
+<meta name="theme-color" content="#0b0d10">
+<meta property="og:title" content="Guardrail Evaluator — measure the bypass RATE">
+<meta property="og:description" content="20 documented injection tactics, 6 reference guardrail layers, one number that matters: bypass rate.">
+<meta property="og:type" content="website">
+<link rel="canonical" href="https://vishnuvsdevtech.github.io/guardrail-eval/">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="dot"></span><strong>GUARDRAIL EVALUATOR</strong><span class="tag mono">POC · v0.1</span></div>
+  <a class="gh mono" href="https://github.com/vishnuvsdevtech/guardrail-eval">source →</a>
+</header>
+
+<main>
+  <section class="hero">
+    <p class="eyebrow mono">19 of 20 is not a guardrail</p>
+    <h1>Prompt injection is not a bug you fix.<br>It is a <em>rate</em> you measure.</h1>
+    <p class="lede">
+      Every guardrail is a pattern match, so every guardrail has a bypass. The only useful
+      question is <strong>what fraction of a documented suite gets through</strong>, per layer,
+      per attack category — and whether adding a layer actually moves that number.
+    </p>
+    <div class="specs mono"><span>20 tactics</span><span>6 layers</span><span>benign canary</span><span>no live model needed</span></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Layer matrix <span class="muted">— toggle a guardrail, watch the rate move</span></h2>
+      <p class="muted small">
+        Every payload below asks for a harmless token (<span class="mono">CANARY-7F3A</span>),
+        never a real objective. A bypass is measurable without producing anything harmful —
+        that is what makes the suite safe to run against your own system.
+        Input and tool layers are scored here; output layers need a live target.
+      </p>
+    </div>
+
+    <div class="split">
+      <div class="gaugebox">
+        <div class="gauge">
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <circle cx="60" cy="60" r="52" class="track"></circle>
+            <circle cx="60" cy="60" r="52" class="fill" id="ring"></circle>
+          </svg>
+          <div class="gcenter"><b id="rate">—</b><small class="mono">bypass</small></div>
+        </div>
+        <p class="mono small" id="summary">computing…</p>
+      </div>
+
+      <div class="layers" id="layers"></div>
+    </div>
+
+    <div class="table-wrap">
+      <table id="tbl">
+        <thead><tr><th>id</th><th>category</th><th>tactic</th><th>verdict</th><th>caught by</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="grid2">
+    <div class="card">
+      <h3>Run it against a real endpoint</h3>
+      <p>A target is any HTTP service that takes <span class="mono">{"messages":[…]}</span> and returns
+      <span class="mono">{"text":"…"}</span>. Point it at a staging model, not production customer traffic.</p>
+      <pre class="code mono">python -m guardeval run \
+  --endpoint http://localhost:8000/chat \
+  --layers input.pattern input.structure \
+           input.hierarchy output.canary \
+  --out out/results.json
+
+cases 20  bypassed 10  rate 0.5
+  direct override 0/2   0.0
+  encoding        2/3   0.667
+  tool misuse     2/2   1.0</pre>
+      <p class="muted small">Those figures are this repo's own run against no target — input layers only.
+      With a live model, output and tool layers join the score.</p>
+    </div>
+    <div class="card">
+      <h3>What the numbers already say</h3>
+      <ul class="ticks">
+        <li><strong>Phrase matching is the weakest layer.</strong> Blocking "ignore previous instructions" catches the naive cases and almost nothing else — obfuscation, homoglyphs and encodings walk straight past it.</li>
+        <li><strong>Structural checks catch different attacks</strong>, not more of the same ones: role-tag injection and JSON role spoofing fail a pattern filter and pass a structure filter.</li>
+        <li><strong>Instruction-hierarchy checks are narrow but cheap</strong> — they only help for retrieved content, and they are the difference between an indirect injection being data or an order.</li>
+        <li><strong>Tool guards only work if the tool proxy enforces them.</strong> A prompt-level "do not use file://" is a suggestion; the proxy rejecting the argument is a control.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="panel tight">
+    <div class="panel-head"><h2>Scope, stated plainly</h2></div>
+    <div class="cols">
+      <div><h4>What this is</h4><p>A suite of documented, published injection tactics and reference implementations of the guardrail shapes found in production, so the layers can be compared on one axis. Deterministic — same inputs, same score.</p></div>
+      <div><h4>What it is not</h4><p>Not a measurement of any specific model. The page scores <em>layers</em>. Real bypass rates need a live target, per model, per temperature, run more than once — which is what the CLI does.</p></div>
+      <div><h4>Why rates</h4><p>Because a determined user sends 100 prompts. A layer at 95 % is a layer that fails five times a day at that volume, and the operator never sees it unless someone measured the rate first.</p></div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot mono"><span>Guardrail Evaluator · POC</span><span>canary-tested · no live credentials</span></footer>
+<script src="assets/app.js"></script>
+</body>
+</html>
